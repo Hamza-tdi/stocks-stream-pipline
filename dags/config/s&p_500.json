@@ -5,6 +5,8 @@
 		"url": "https://finnhub.io",
 		"quote": "/api/v1/quote?symbol={SYMBOL}&token=",
 		"status_check": "/api/v1/stock/market-status?exchange={EXCHANGE}&token=",
+		"peers": "/api/v1/stock/peers?symbol={SYMBOL}&grouping={GROUPING}&token=",
+		"recommendation_trends": "/api/v1/stock/recommendation?symbol={SYMBOL}&token=",
 		"companies": [
 			{
 				"symbol": "MMM",
