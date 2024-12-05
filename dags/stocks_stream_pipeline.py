@@ -109,91 +109,106 @@ def fetch_data_task(**kwargs):
     token = variables[0]['api_key']
     # Fetch Recommendations
     records = []
-    for i in range(len(variables[0]['companies'][0:10])):
+    for i in range(len(variables[0]['companies'][0:3])):
         recommendation_trends = variables[0]['recommendation_trends'].replace('{SYMBOL}', variables[0]['companies'][i]['symbol'])
-        res = requests.get(f'{url}{recommendation_trends}{token}')
-        res_raw = res.json()
-        if res.status_code == 429:
-            print(f'API Limit Reached')
-            time.sleep(10)
-        elif res.status_code == 200:
-            record = []
-            for elm in res_raw:
-                item = {
-                    'symbol': variables[0]['companies'][i]['symbol'],
-                    'buy': elm['buy'],
-                    'sell': elm['sell'],
-                    'hold': elm['hold'],
-                    'strong_buy': elm['strongBuy'],
-                    'strong_sell': elm['strongSell'],
-                    'period': elm['period']
-                }
-                record.append(item)
-            print(record)
-            records.append(record)
-        else:
-            print(f"Unexpected status code: {res.status_code}")
-            return None
-    kwargs['ti'].xcom_push(key='recommendation_trends', value=records)
-
-    # Fetch Peers
-    records = []
-    for i in range(len(variables[0]['companies'][0:10])):
-        groups = []
-        for item in ['sector', 'industry', 'subIndustry']:
-            peers = variables[0]['peers'].replace('{SYMBOL}', variables[0]['companies'][i]['symbol'])
-            peers = peers.replace('{GROUPING}', item)
-            res = requests.get(f'{url}{peers}{token}')
+        try:
+            res = requests.get(f'{url}{recommendation_trends}{token}')
             res_raw = res.json()
             if res.status_code == 429:
                 print(f'API Limit Reached')
                 time.sleep(10)
             elif res.status_code == 200:
-                groups.append(res_raw)
+                record = []
+                for elm in res_raw:
+                    item = {
+                        'symbol': variables[0]['companies'][i]['symbol'],
+                        'buy': elm['buy'],
+                        'sell': elm['sell'],
+                        'hold': elm['hold'],
+                        'strong_buy': elm['strongBuy'],
+                        'strong_sell': elm['strongSell'],
+                        'period': elm['period']
+                    }
+                    record.append(item)
+                if not record:
+                    print('Record is Empty')
+                else:
+                    print(record)
+                    records.append(record)
             else:
                 print(f"Unexpected status code: {res.status_code}")
                 return None
-        try:
-            record = {
-                'symbol': variables[0]['companies'][i]['symbol'],
-                'sector': groups[0],
-                'industry': groups[1],
-                'subIndustry': groups[2]
-            }
-            print(record)
-            records.append(record)
-        except IndexError as e:
-            print('Empty List, Symbol has no data')
+        except Exception as e:
+            print(e)
+            continue
+    kwargs['ti'].xcom_push(key='recommendation_trends', value=records)
+
+    # Fetch Peers
+    records = []
+    for i in range(len(variables[0]['companies'][0:3])):
+        groups = []
+        for item in ['sector', 'industry', 'subIndustry']:
+            peers = variables[0]['peers'].replace('{SYMBOL}', variables[0]['companies'][i]['symbol'])
+            peers = peers.replace('{GROUPING}', item)
+            try:
+                res = requests.get(f'{url}{peers}{token}')
+                res_raw = res.json()
+                if res.status_code == 429:
+                    print(f'API Limit Reached')
+                    time.sleep(10)
+                elif res.status_code == 200:
+                    groups.append(res_raw)
+                else:
+                    print(f"Unexpected status code: {res.status_code}")
+                    return None
+                try:
+                    record = {
+                        'symbol': variables[0]['companies'][i]['symbol'],
+                        'sector': groups[0],
+                        'industry': groups[1],
+                        'subIndustry': groups[2]
+                    }
+                    print(record)
+                    records.append(record)
+                except IndexError as e:
+                    print('Empty List, Symbol has no data')
+            except Exception as e:
+                print(e)
+                continue
     kwargs['ti'].xcom_push(key='peers', value=records)
 
     # Fetch Quotes
     records = []
-    for i in range(len(variables[0]['companies'][0:10])):
+    for i in range(len(variables[0]['companies'][0:3])):
         quote = variables[0]['quote'].replace('{SYMBOL}', variables[0]['companies'][i]['symbol'])
-        res = requests.get(f'{url}{quote}{token}')
-        res_raw = res.json()
-        if res.status_code == 429:
-            print(f'API Limit Reached')
-            time.sleep(10)
-        elif res.status_code == 200:
-            record = {
-                'id': f"{variables[0]['companies'][i]['symbol']}_{res_raw['t']}",
-                'symbol': variables[0]['companies'][i]['symbol'],
-                'name': variables[0]['companies'][i]['name'],
-                'current_price': res_raw['c'],
-                'change': res_raw['d'],
-                'percent_change': res_raw['dp'],
-                'high_price_of_the_day': res_raw['h'],
-                'low_price_of_the_day': res_raw['l'],
-                'open_price_of_the_day': res_raw['o'],
-                'previous_close_price': res_raw['pc'],
-                'timestamp': res_raw['t']
-            }
-            print(record)
-            records.append(record)
-        else:
-            print(f"Unexpected status code: {res.status_code}")
-            return None
+        try:
+            res = requests.get(f'{url}{quote}{token}')
+            res_raw = res.json()
+            if res.status_code == 429:
+                print(f'API Limit Reached')
+                time.sleep(10)
+            elif res.status_code == 200:
+                record = {
+                    'id': f"{variables[0]['companies'][i]['symbol']}_{res_raw['t']}",
+                    'symbol': variables[0]['companies'][i]['symbol'],
+                    'name': variables[0]['companies'][i]['name'],
+                    'current_price': res_raw['c'],
+                    'change': res_raw['d'],
+                    'percent_change': res_raw['dp'],
+                    'high_price_of_the_day': res_raw['h'],
+                    'low_price_of_the_day': res_raw['l'],
+                    'open_price_of_the_day': res_raw['o'],
+                    'previous_close_price': res_raw['pc'],
+                    'timestamp': res_raw['t']
+                }
+                print(record)
+                records.append(record)
+            else:
+                print(f"Unexpected status code: {res.status_code}")
+                return None
+        except Exception as e:
+            print(e)
+            continue
     kwargs['ti'].xcom_push(key='records', value=records)
 def check_market_status_task(**kwargs):
     print('Checking Market Status')
@@ -246,9 +261,9 @@ provide_context=True,
                 id VARCHAR(25) PRIMARY KEY,
                 symbol VARCHAR(10),
                 name VARCHAR(255),
-                current_price DECIMAL(10, 2) NOT NULL,
-                change DECIMAL(10, 2) NOT NULL,
-                percent_change DECIMAL(5, 2) NOT NULL,
+                current_price DECIMAL(10, 2),
+                change DECIMAL(10, 2),
+                percent_change DECIMAL(5, 2),
                 high_price_of_the_day DECIMAL(10, 2),
                 low_price_of_the_day DECIMAL(10, 2),
                 open_price_of_the_day DECIMAL(10, 2),
